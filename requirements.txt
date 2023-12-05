@@ -1,0 +1,7 @@
+Flask
+surprise
+gunicorn
+pandas
+pymysql
+python-dotenv
+apscheduler
