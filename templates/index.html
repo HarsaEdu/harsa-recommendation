@@ -16,25 +16,59 @@
 
     <div class="alert alert-info" role="alert">
       <p>
-        Use the API endpoint <code>/api/recommend</code> to get course
-        recommendations for a customer.
+        Use the API endpoint <code>/recommend</code> to get course
+        recommendations for a user.
       </p>
-      <p>Send a POST request with JSON payload: <code>{"user_id": 1}</code></p>
+      <p>
+        Send a POST request with JSON payload:
+        <code>{ "user_id": 2, "max": 5 }</code>
+      </p>
     </div>
 
     <div class="alert alert-success" role="alert">
       <p><strong>Example Response:</strong></p>
       <pre>
-{
-    "user_id": 1,
-    "recommendations": [
-        {"course_id": 5, "predicted_rating": 4.2, "is_in_interest_categories": true},
-        {"course_id": 3, "predicted_rating": 3.9, "is_in_interest_categories": true},
-        {"course_id": 1, "predicted_rating": 3.5, "is_in_interest_categories": true},
-        {"course_id": 2, "predicted_rating": 3.1, "is_in_interest_categories": true},
-        {"course_id": 4, "predicted_rating": 3.8, "is_in_interest_categories": false}
-    ]
-}
+        {
+          "recommendations": [
+              {
+                  "course_description": "Selamat datang di kelas \"Membangun Dunia Interaktif\"! Dalam kelas ini, Anda akan memasuki dunia seru pengembangan game, dari konsep dasar hingga teknik-teknik tingkat lanjutan. Mulai dari pemahaman dasar tentang desain game, grafika, hingga pengembangan gameplay yang memukau, kelas ini dirancang untuk memandu Anda melalui perjalanan yang memacu kreativitas.",
+                  "course_id": 3,
+                  "course_title": "Membangun Dunia Interaktif: Panduan Komprehensif dalam Pengembangan Game",
+                  "image_url": "https://placewaifu.com/image/200/200",
+                  "instructor_name": "admin gans",
+                  "is_in_interest_categories": true,
+                  "predicted_rating": 4.0
+              },
+              {
+                  "course_description": "Selamat datang di kelas \"Membangun Aplikasi Mobile\"! Dalam kelas ini, Anda akan memasuki dunia pengembangan aplikasi yang dinamis, fokus pada platform Android dan iOS. Dari konsep dasar hingga teknik-teknik terkini, kami akan memandu Anda melalui perjalanan yang memungkinkan Anda membuat aplikasi mobile yang inovatif dan sesuai dengan tuntutan pasar.",
+                  "course_id": 4,
+                  "course_title": "Membangun Aplikasi Mobile: Panduan Komprehensif dalam Pengembangan Aplikasi untuk Android dan iOS",
+                  "image_url": "https://placewaifu.com/image/200/200",
+                  "instructor_name": "admin gans",
+                  "is_in_interest_categories": true,
+                  "predicted_rating": 4.0
+              },
+              {
+                  "course_description": "Selamat datang di kelas \"Membangun Aplikasi Mobile\"! Dalam kelas ini, Anda akan memasuki dunia pengembangan aplikasi yang dinamis, fokus pada platform Android dan iOS. Dari konsep dasar hingga teknik-teknik terkini, kami akan memandu Anda melalui perjalanan yang memungkinkan Anda membuat aplikasi mobile yang inovatif dan sesuai dengan tuntutan pasar.",
+                  "course_id": 5,
+                  "course_title": "Mengukir Jejak di Dunia Mobile: Petunjuk Pintar dalam Pengembangan Aplikasi untuk Android dan iOS",
+                  "image_url": "https://placewaifu.com/image/200/200",
+                  "instructor_name": "admin gans",
+                  "is_in_interest_categories": true,
+                  "predicted_rating": 4.0
+              },
+              {
+                  "course_description": "Selamat datang di kelas \"Menguasai Dunia Web\"! Dalam kelas ini, Anda akan dibimbing melalui perjalanan yang mendalam untuk memahami dan menguasai seni pemrograman web. Mulai dari dasar-dasar HTML, CSS, dan JavaScript hingga konsep-konsep lanjutan seperti pengembangan front-end dan back-end, kita akan menjelajahi semua aspek yang diperlukan untuk menjadi seorang pengembang web yang handal.",
+                  "course_id": 2,
+                  "course_title": "Menguasai Dunia Web: Panduan Komprehensif dalam Pemrograman Web",
+                  "image_url": "https://placewaifu.com/image/200/200",
+                  "instructor_name": "admin gans",
+                  "is_in_interest_categories": false,
+                  "predicted_rating": 4.0
+              }
+          ],
+          "user_id": 2
+      }
         </pre
       >
     </div>

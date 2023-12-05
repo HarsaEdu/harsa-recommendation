@@ -36,10 +36,15 @@ SELECT feedbacks.id,
        feedbacks.course_id,
        feedbacks.rating,
        feedbacks.created_at AS feedback_created_at,
+       courses.title,
+       courses.description,
        courses.category_id,
+       courses.image_url,
+       CONCAT(user_profiles.first_name, ' ', user_profiles.last_name) AS instructor_name,
        courses.created_at AS course_created_at
 FROM feedbacks
 JOIN courses ON feedbacks.course_id = courses.id
+JOIN user_profiles ON courses.user_id = user_profiles.id
 WHERE feedbacks.deleted_at IS NULL;
 """
 
@@ -78,7 +83,20 @@ def get_top_recommendations(model, user_id, data, user_interests, n=10):
 
         # Predict rating and store item prediction
         predicted_rating = model.predict(user_id, item_id).est
-        item_predictions.append({'course_id': item_id, 'predicted_rating': predicted_rating, 'is_in_interest_categories': is_in_interest_categories})
+        course_title = data[data['course_id'] == item_id]['title'].values[0]
+        course_description = data[data['course_id'] == item_id]['description'].values[0]
+        image_url = data[data['course_id'] == item_id]['image_url'].values[0]
+        instructor_name = data[data['course_id'] == item_id]['instructor_name'].values[0]
+
+        item_predictions.append({
+            'course_id': item_id,
+            'course_title': course_title,
+            'course_description': course_description,
+            'image_url': image_url,
+            'instructor_name': instructor_name,
+            'predicted_rating': predicted_rating,
+            'is_in_interest_categories': is_in_interest_categories
+        })
 
     # Sort predictions based on predicted rating and interest category status
     def sort_function(item_prediction):
