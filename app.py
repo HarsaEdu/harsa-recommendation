@@ -4,6 +4,7 @@ from surprise import Dataset, Reader, KNNBasic
 from dotenv import load_dotenv
 import os
 import pymysql
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 
@@ -25,14 +26,9 @@ connection = pymysql.connect(
 )
 
 # Load data from MySQL tables into Pandas DataFrames
-courses = "SELECT * FROM courses WHERE deleted_at IS NULL"
-courses = pd.read_sql(courses, connection)
-
-feedbacks = "SELECT * FROM feedbacks WHERE deleted_at IS NULL"
-feedbacks = pd.read_sql(feedbacks, connection)
-
-user_interests = "SELECT * FROM user_interests"
-user_interests = pd.read_sql(user_interests, connection)
+courses = pd.read_sql("SELECT * FROM courses WHERE deleted_at IS NULL", connection)
+feedbacks = pd.read_sql("SELECT * FROM feedbacks WHERE deleted_at IS NULL", connection)
+user_interests = pd.read_sql("SELECT * FROM user_interests", connection)
 
 datas = """
 SELECT feedbacks.id,
@@ -43,8 +39,7 @@ SELECT feedbacks.id,
        courses.category_id,
        courses.created_at AS course_created_at
 FROM feedbacks
-JOIN courses
-ON feedbacks.course_id = courses.id
+JOIN courses ON feedbacks.course_id = courses.id
 WHERE feedbacks.deleted_at IS NULL;
 """
 
@@ -54,7 +49,7 @@ datas = pd.read_sql(datas, connection)
 reader = Reader(rating_scale=(1, 5))
 
 # Load the data into a Surprise Dataset
-data_surprise = Dataset.load_from_df(feedbacks[['user_id', 'course_id','rating']], reader)
+data_surprise = Dataset.load_from_df(feedbacks[['user_id', 'course_id', 'rating']], reader)
 
 # Use the KNNBasic collaborative filtering algorithm
 sim_options = {'name': 'cosine', 'user_based': False}
@@ -106,16 +101,24 @@ def get_top_recommendations(model, user_id, data, user_interests, n=10):
 
     return top_recommendations
 
+def restart():
+    os.system("pkill -f 'python app.py'")
+
+# Schedule restart every 1 hour
+scheduler = BackgroundScheduler()
+scheduler.add_job(restart, 'interval', hours=1)
+scheduler.start()
+
 @app.route('/')
 def documentation():
     return render_template('index.html')
 
 @app.route('/recommends', methods=['POST'])
-
 def recommends():
     user_id = int(request.json['user_id'])
     max_recommendation = int(request.json['max'])
 
+    # Use get_top_recommendations function to get recommendations
     top_recommendations = get_top_recommendations(recommendation_model, user_id, datas, user_interests, max_recommendation)
 
     return jsonify({'user_id': user_id, 'recommendations': top_recommendations})
