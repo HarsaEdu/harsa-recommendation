@@ -4,67 +4,68 @@ from surprise import Dataset, Reader, KNNBasic
 from dotenv import load_dotenv
 import os
 import pymysql
-from apscheduler.schedulers.background import BackgroundScheduler
-import time
 
 app = Flask(__name__)
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Get MySQL connection details from environment variables
-mysql_host = os.getenv("MYSQL_HOST")
-mysql_user = os.getenv("MYSQL_USER")
-mysql_password = os.getenv("MYSQL_PASSWORD")
-mysql_database = os.getenv("MYSQL_DATABASE")
 
-# Connect to MySQL
-connection = pymysql.connect(
-    host=mysql_host,
-    user=mysql_user,
-    password=mysql_password,
-    database=mysql_database
-)
+def train_data() :
+    # Get MySQL connection details from environment variables
+    mysql_host = os.getenv("MYSQL_HOST")
+    mysql_user = os.getenv("MYSQL_USER")
+    mysql_password = os.getenv("MYSQL_PASSWORD")
+    mysql_database = os.getenv("MYSQL_DATABASE")
 
-# Load data from MySQL tables into Pandas DataFrames
-courses = pd.read_sql("SELECT * FROM courses WHERE deleted_at IS NULL", connection)
-feedbacks = pd.read_sql("SELECT * FROM feedbacks WHERE deleted_at IS NULL", connection)
-user_interests = pd.read_sql("SELECT * FROM user_interests", connection)
+    # Connect to MySQL
+    connection = pymysql.connect(
+        host=mysql_host,
+        user=mysql_user,
+        password=mysql_password,
+        database=mysql_database
+    )
 
-datas = """
-SELECT feedbacks.id,
-       feedbacks.user_id,
-       feedbacks.course_id,
-       feedbacks.rating,
-       feedbacks.created_at AS feedback_created_at,
-       courses.title,
-       courses.description,
-       courses.category_id,
-       courses.rating,
-       courses.image_url,
-       CONCAT(user_profiles.first_name, ' ', user_profiles.last_name) AS instructor_name,
-       courses.created_at AS course_created_at
-FROM feedbacks
-JOIN courses ON feedbacks.course_id = courses.id
-JOIN user_profiles ON courses.user_id = user_profiles.id
-WHERE feedbacks.deleted_at IS NULL;
-"""
+    # Load data from MySQL tables into Pandas DataFrames
+    courses = pd.read_sql("SELECT * FROM courses WHERE deleted_at IS NULL", connection)
+    feedbacks = pd.read_sql("SELECT * FROM feedbacks WHERE deleted_at IS NULL", connection)
+    user_interests = pd.read_sql("SELECT * FROM user_interests", connection)
 
-datas = pd.read_sql(datas, connection)
+    datas = """
+    SELECT feedbacks.id,
+        feedbacks.user_id,
+        feedbacks.course_id,
+        feedbacks.rating,
+        feedbacks.created_at AS feedback_created_at,
+        courses.title,
+        courses.description,
+        courses.category_id,
+        courses.image_url,
+        CONCAT(user_profiles.first_name, ' ', user_profiles.last_name) AS instructor_name,
+        courses.created_at AS course_created_at
+    FROM feedbacks
+    JOIN courses ON feedbacks.course_id = courses.id
+    JOIN user_profiles ON courses.user_id = user_profiles.id
+    WHERE feedbacks.deleted_at IS NULL;
+    """
 
-# Create a Reader object
-reader = Reader(rating_scale=(1, 5))
+    datas = pd.read_sql(datas, connection)
 
-# Load the data into a Surprise Dataset
-data_surprise = Dataset.load_from_df(feedbacks[['user_id', 'course_id', 'rating']], reader)
+    # Create a Reader object
+    reader = Reader(rating_scale=(1, 5))
 
-# Use the KNNBasic collaborative filtering algorithm
-sim_options = {'name': 'cosine', 'user_based': False}
-recommendation_model = KNNBasic(sim_options=sim_options)
+    # Load the data into a Surprise Dataset
+    data_surprise = Dataset.load_from_df(feedbacks[['user_id', 'course_id', 'rating']], reader)
 
-# Train the model on the entire dataset
-trainset = data_surprise.build_full_trainset()
-recommendation_model.fit(trainset)
+    # Use the KNNBasic collaborative filtering algorithm
+    sim_options = {'name': 'cosine', 'user_based': False}
+    recommendation_model = KNNBasic(sim_options=sim_options)
+
+    # Train the model on the entire dataset
+    trainset = data_surprise.build_full_trainset()
+    recommendation_model.fit(trainset)
+
+    return recommendation_model, user_interests, datas
 
 def get_top_recommendations(model, user_id, data, user_interests, n=10):
     # Get user's interests (category_id)
@@ -87,7 +88,6 @@ def get_top_recommendations(model, user_id, data, user_interests, n=10):
         predicted_rating = model.predict(user_id, item_id).est
         course_title = data[data['course_id'] == item_id]['title'].values[0]
         course_description = data[data['course_id'] == item_id]['description'].values[0]
-        course_rating = data[data['course_id'] == item_id]['rating'].values[0]
         image_url = data[data['course_id'] == item_id]['image_url'].values[0]
         instructor_name = data[data['course_id'] == item_id]['instructor_name'].values[0]
 
@@ -98,7 +98,6 @@ def get_top_recommendations(model, user_id, data, user_interests, n=10):
             'image_url': image_url,
             'instructor_name': instructor_name,
             'predicted_rating': predicted_rating,
-            'course_rating': course_rating,
             'is_in_interest_categories': is_in_interest_categories
         })
 
@@ -106,7 +105,6 @@ def get_top_recommendations(model, user_id, data, user_interests, n=10):
     def sort_function(item_prediction):
         is_in_interest_categories = item_prediction['is_in_interest_categories']
         predicted_rating = item_prediction['predicted_rating']
-        course_rating = item_prediction['course_rating']
 
         # Assign weights based on interest category status
         interest_category_weight = 2 if is_in_interest_categories else 1
@@ -115,7 +113,7 @@ def get_top_recommendations(model, user_id, data, user_interests, n=10):
         weighted_rating = interest_category_weight * predicted_rating
 
         # Sort based on weighted rating and then by course rating if predicted rating is the same
-        return (weighted_rating, course_rating)
+        return (weighted_rating)
 
     item_predictions.sort(key=sort_function, reverse=True)
 
@@ -123,22 +121,6 @@ def get_top_recommendations(model, user_id, data, user_interests, n=10):
     top_recommendations = item_predictions[:n]
 
     return top_recommendations
-
-def restart():
-    os.system("pkill -f 'python app.py'")
-
-# Schedule restart every 1 hour
-scheduler = BackgroundScheduler()
-scheduler.add_job(restart, 'interval', hours=1, id='restart_job')
-scheduler.start()
-
-# This is blocking the application from exiting
-try:
-    while True:
-        time.sleep(2)
-except (KeyboardInterrupt, SystemExit):
-    # Not strictly necessary if daemonic mode is enabled but should be done if possible
-    scheduler.shutdown()
 
 @app.route('/')
 def documentation():
@@ -149,10 +131,13 @@ def recommends():
     user_id = int(request.json['user_id'])
     max_recommendation = int(request.json['max'])
 
+    # Train Data every request
+    recommendation_model, user_interests, datas = train_data()
+
     # Use get_top_recommendations function to get recommendations
     top_recommendations = get_top_recommendations(recommendation_model, user_id, datas, user_interests, max_recommendation)
 
     return jsonify({'user_id': user_id, 'recommendations': top_recommendations})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()

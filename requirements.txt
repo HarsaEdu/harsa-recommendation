@@ -4,4 +4,3 @@ gunicorn
 pandas
 pymysql
 python-dotenv
-apscheduler
