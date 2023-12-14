@@ -129,7 +129,7 @@ def restart():
 
 # Schedule restart every 1 hour
 scheduler = BackgroundScheduler()
-scheduler.add_job(restart, 'interval', seconds=60 * 60 * 1)
+scheduler.add_job(restart, 'interval', hours=1, id='restart_job')
 scheduler.start()
 
 # This is blocking the application from exiting
