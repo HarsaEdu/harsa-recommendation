@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import os
 import pymysql
 from apscheduler.schedulers.background import BackgroundScheduler
+import time
 
 app = Flask(__name__)
 
@@ -124,8 +125,16 @@ def restart():
 
 # Schedule restart every 1 hour
 scheduler = BackgroundScheduler()
-scheduler.add_job(restart, 'interval', hours=1)
+scheduler.add_job(restart, 'interval', seconds=60 * 60 * 1)
 scheduler.start()
+
+# This is blocking the application from exiting
+try:
+    while True:
+        time.sleep(2)
+except (KeyboardInterrupt, SystemExit):
+    # Not strictly necessary if daemonic mode is enabled but should be done if possible
+    scheduler.shutdown()
 
 @app.route('/')
 def documentation():
