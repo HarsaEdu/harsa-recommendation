@@ -41,6 +41,7 @@ def train_data() :
         courses.description,
         courses.category_id,
         courses.image_url,
+        courses.rating as course_rating,
         CONCAT(user_profiles.first_name, ' ', user_profiles.last_name) AS instructor_name,
         courses.created_at AS course_created_at
     FROM feedbacks
@@ -90,6 +91,7 @@ def get_top_recommendations(model, user_id, data, user_interests, n=10):
         course_description = data[data['course_id'] == item_id]['description'].values[0]
         image_url = data[data['course_id'] == item_id]['image_url'].values[0]
         instructor_name = data[data['course_id'] == item_id]['instructor_name'].values[0]
+        course_rating = data[data['course_id'] == item_id]['course_rating'].values[0]
 
         item_predictions.append({
             'course_id': item_id,
@@ -98,6 +100,7 @@ def get_top_recommendations(model, user_id, data, user_interests, n=10):
             'image_url': image_url,
             'instructor_name': instructor_name,
             'predicted_rating': predicted_rating,
+            'course_rating': course_rating,
             'is_in_interest_categories': is_in_interest_categories
         })
 
@@ -105,15 +108,17 @@ def get_top_recommendations(model, user_id, data, user_interests, n=10):
     def sort_function(item_prediction):
         is_in_interest_categories = item_prediction['is_in_interest_categories']
         predicted_rating = item_prediction['predicted_rating']
+        course_rating = item_prediction['course_rating']
 
         # Assign weights based on interest category status
         interest_category_weight = 2 if is_in_interest_categories else 1
 
-        # Calculate weighted rating
+        # Calculate weighted rating  
         weighted_rating = interest_category_weight * predicted_rating
 
-        # Sort based on weighted rating and then by course rating if predicted rating is the same
-        return (weighted_rating)
+        # Return tuple of (weighted_rating, course_rating) 
+        # This will sort by weighted rating first, then course rating
+        return (weighted_rating, course_rating)
 
     item_predictions.sort(key=sort_function, reverse=True)
 
