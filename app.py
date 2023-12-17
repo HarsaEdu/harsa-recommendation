@@ -97,7 +97,7 @@ def get_top_recommendations(model, user_id, data, user_interests, n=10):
             'course_id': item_id,
             'course_title': course_title,
             'course_description': course_description,
-            'image_url': image_url,
+            'course_image': image_url,
             'instructor_name': instructor_name,
             'predicted_rating': predicted_rating,
             'course_rating': course_rating,
